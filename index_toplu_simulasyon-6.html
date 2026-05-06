@@ -1,0 +1,1429 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Toplu Ortalama Vade Analizi</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --navy: #0b1e3d;
+  --navy2: #132848;
+  --blue: #1857d1;
+  --blue-soft: #dce8ff;
+  --green: #076e40;
+  --green-soft: #d0f5e3;
+  --red: #b91c1c;
+  --red-soft: #fee2e2;
+  --amber: #92400e;
+  --amber-soft: #fef3c7;
+  --slate: #f1f4f9;
+  --border: #dce2ec;
+  --text: #1a2740;
+  --muted: #6b7a93;
+  --white: #ffffff;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'IBM Plex Sans', sans-serif;
+  background: var(--slate);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 14px;
+}
+
+/* NAV */
+nav {
+  background: var(--navy);
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.brand-icon {
+  width: 28px; height: 28px;
+  background: var(--blue);
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  font-family: 'IBM Plex Mono', monospace;
+  letter-spacing: -0.5px;
+}
+.nav-tag {
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.5);
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-family: 'IBM Plex Mono', monospace;
+  letter-spacing: 0.5px;
+}
+
+/* SCREENS */
+#uploadScreen { display: flex; align-items: center; justify-content: center; min-height: calc(100vh - 50px); padding: 24px; }
+#resultsScreen { display: none; padding: 24px; max-width: 1200px; margin: 0 auto; }
+
+/* UPLOAD CARD */
+.upload-card {
+  background: var(--white);
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  padding: 36px;
+  width: 100%;
+  max-width: 500px;
+  box-shadow: 0 4px 28px rgba(11,30,61,0.08);
+}
+.upload-card h1 { font-size: 20px; font-weight: 600; margin-bottom: 6px; color: var(--navy); }
+.upload-card > p { font-size: 13px; color: var(--muted); line-height: 1.65; margin-bottom: 28px; }
+
+.field-label { font-size: 10px; font-weight: 600; color: var(--muted); letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 7px; font-family: 'IBM Plex Mono', monospace; }
+
+.url-row { display: flex; gap: 8px; margin-bottom: 20px; }
+.url-input {
+  flex: 1; height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 0 12px;
+  font-size: 12px;
+  font-family: 'IBM Plex Mono', monospace;
+  color: var(--navy);
+  background: var(--slate);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.url-input:focus { border-color: var(--blue); background: #fff; }
+
+.btn-save {
+  height: 38px; padding: 0 14px;
+  background: var(--navy); color: #fff;
+  border: none; border-radius: 7px;
+  font-size: 12px; font-weight: 500;
+  cursor: pointer;
+  font-family: 'IBM Plex Sans', sans-serif;
+  white-space: nowrap;
+  transition: opacity 0.15s;
+}
+.btn-save:hover { opacity: 0.82; }
+
+.sep { height: 1px; background: var(--border); margin: 20px 0; }
+
+/* FORMAT HINT */
+.format-hint {
+  background: #f0f4ff;
+  border: 1px solid #c7d7f9;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 20px;
+  font-size: 12px;
+  color: var(--navy);
+}
+.format-hint strong { font-weight: 600; display: block; margin-bottom: 4px; }
+.format-hint code {
+  font-family: 'IBM Plex Mono', monospace;
+  background: #dce8ff;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 11px;
+}
+
+/* DROP ZONE */
+.drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: 10px;
+  padding: 32px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  position: relative;
+}
+.drop-zone:hover, .drop-zone.over { border-color: var(--blue); background: #f0f5ff; }
+.drop-zone.has-file { border-color: var(--green); background: #f0fdf6; }
+.drop-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+#fileList { margin-top: 10px; display: flex; flex-direction: column; gap: 5px; }
+.file-item {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--slate); border: 1px solid var(--border);
+  border-radius: 6px; padding: 6px 10px; font-size: 12px;
+}
+.file-item-name { font-family: 'IBM Plex Mono', monospace; color: var(--navy); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-item-size { color: var(--muted); font-size: 11px; margin: 0 8px; flex-shrink: 0; }
+.file-item-remove {
+  background: none; border: none; cursor: pointer;
+  color: var(--muted); font-size: 15px; line-height: 1; padding: 0 2px;
+  flex-shrink: 0;
+}
+.file-item-remove:hover { color: var(--red); }
+
+.drop-icon {
+  width: 44px; height: 44px;
+  border-radius: 10px;
+  background: var(--blue-soft);
+  display: grid;
+  place-items: center;
+  margin: 0 auto 12px;
+}
+.drop-zone.has-file .drop-icon { background: var(--green-soft); }
+
+.drop-title { font-size: 13px; font-weight: 500; margin-bottom: 4px; }
+.drop-sub { font-size: 11px; color: var(--muted); }
+.drop-file { font-size: 12px; font-weight: 500; color: var(--green); display: none; }
+.has-file .drop-file { display: block; }
+.has-file .drop-title, .has-file .drop-sub { display: none; }
+
+.btn-submit {
+  width: 100%; height: 44px;
+  margin-top: 16px;
+  background: var(--blue);
+  color: #fff;
+  border: none; border-radius: 8px;
+  font-size: 14px; font-weight: 500;
+  cursor: pointer;
+  font-family: 'IBM Plex Sans', sans-serif;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  transition: background 0.15s;
+}
+.btn-submit:hover:not(:disabled) { background: #1246b5; }
+.btn-submit:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* SIMULATION PANEL */
+.sim-panel {
+  margin-top: 18px;
+  padding: 14px 16px;
+  background: linear-gradient(180deg, #fafbff 0%, #f5f7fc 100%);
+  border: 1px dashed #c9d4ee;
+  border-radius: 9px;
+}
+.sim-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.sim-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--navy);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  font-family: 'IBM Plex Mono', monospace;
+}
+.sim-panel-title-icon {
+  width: 18px; height: 18px;
+  border-radius: 4px;
+  background: #e7eeff;
+  display: grid; place-items: center;
+  color: var(--blue);
+  font-size: 11px;
+  font-weight: 700;
+}
+.sim-panel-hint {
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  font-family: 'IBM Plex Sans', sans-serif;
+}
+.sim-row {
+  display: flex;
+  gap: 8px;
+}
+.sim-row .sim-amount {
+  flex: 1;
+  height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 0 12px;
+  font-size: 13px;
+  font-family: 'IBM Plex Mono', monospace;
+  color: var(--navy);
+  background: #fff;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.sim-row .sim-amount:focus { border-color: var(--blue); }
+.sim-row .sim-doviz {
+  width: 90px;
+  height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-family: 'IBM Plex Mono', monospace;
+  background: #fff;
+  color: var(--navy);
+  cursor: pointer;
+  outline: none;
+}
+.sim-row .sim-doviz:focus { border-color: var(--blue); }
+.sim-row .sim-gun {
+  width: 110px;
+  height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 0 10px;
+  font-size: 13px;
+  font-family: 'IBM Plex Mono', monospace;
+  background: #fff;
+  color: var(--navy);
+  outline: none;
+  transition: border-color 0.15s;
+  text-align: center;
+}
+.sim-row .sim-gun:focus { border-color: var(--blue); }
+
+.status {
+  display: none; margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 7px;
+  font-size: 12px; font-weight: 500;
+  align-items: center; gap: 8px;
+}
+.status.loading { display: flex; background: var(--blue-soft); color: var(--navy); }
+.status.error { display: flex; background: var(--red-soft); color: var(--red); }
+.spinner { width: 14px; height: 14px; border: 2px solid rgba(24,87,209,0.2); border-top-color: var(--blue); border-radius: 50%; animation: spin 0.65s linear infinite; flex-shrink: 0; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* RESULTS HEADER */
+.results-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.results-title h2 { font-size: 18px; font-weight: 600; color: var(--navy); }
+.results-title p { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+.header-actions { display: flex; gap: 8px; }
+.btn-back, .btn-excel {
+  height: 34px; padding: 0 14px;
+  border-radius: 7px;
+  font-size: 12px; font-weight: 500;
+  cursor: pointer;
+  font-family: 'IBM Plex Sans', sans-serif;
+  display: flex; align-items: center; gap: 6px;
+  transition: 0.15s;
+}
+.btn-back { background: #fff; color: var(--text); border: 1px solid var(--border); }
+.btn-back:hover { background: var(--slate); }
+.btn-excel { background: var(--green); color: #fff; border: none; }
+.btn-excel:hover { background: #065e36; }
+
+/* STATS BAR */
+.stats-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.stat-pill {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 160px;
+}
+.stat-pill-icon {
+  width: 32px; height: 32px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+}
+.stat-pill-body {}
+.stat-pill-val { font-size: 18px; font-weight: 600; color: var(--navy); font-family: 'IBM Plex Mono', monospace; }
+.stat-pill-label { font-size: 10px; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 1px; }
+
+/* SEARCH BAR */
+.search-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.search-input {
+  flex: 1;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 0 12px;
+  font-size: 13px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  outline: none;
+  background: #fff;
+  transition: border-color 0.15s;
+}
+.search-input:focus { border-color: var(--blue); }
+.filter-select {
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  outline: none;
+  background: #fff;
+  color: var(--text);
+  cursor: pointer;
+}
+
+/* COMPANY TABLE */
+.company-table-wrap {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow-x: auto;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 12px rgba(11,30,61,0.04);
+}
+/* Scroll bar - daha belirgin */
+.company-table-wrap::-webkit-scrollbar { height: 10px; }
+.company-table-wrap::-webkit-scrollbar-track { background: var(--slate); }
+.company-table-wrap::-webkit-scrollbar-thumb { background: var(--blue); border-radius: 5px; }
+.company-table-wrap::-webkit-scrollbar-thumb:hover { background: #1246b5; }
+
+.company-table-wrap table { width: 100%; border-collapse: collapse; min-width: 1320px; }
+.company-table-wrap thead th {
+  background: var(--navy);
+  color: rgba(255,255,255,0.75);
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding: 10px 14px;
+  text-align: left;
+  white-space: nowrap;
+  font-family: 'IBM Plex Mono', monospace;
+}
+.company-table-wrap tbody tr {
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.company-table-wrap tbody tr:last-child { border-bottom: none; }
+.company-table-wrap tbody tr:hover { background: #f7f9fc; }
+.company-table-wrap tbody td {
+  padding: 11px 14px;
+  font-size: 12px;
+  vertical-align: middle;
+}
+.company-table-wrap tbody td:first-child { font-weight: 600; color: var(--navy); font-size: 13px; min-width: 220px; }
+
+.num-cell {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  white-space: nowrap;
+  text-align: right;
+}
+.mono-cell {
+  font-family: 'IBM Plex Mono', monospace;
+  white-space: nowrap;
+}
+
+/* Simüle satır */
+.sim-row-table td {
+  background: #f5f7fc !important;
+  color: var(--muted);
+  font-size: 11.5px !important;
+  border-top: 1px dashed #d8deec !important;
+}
+.sim-row-table:hover td { background: #eef1f9 !important; }
+.sim-row-table td:first-child { color: var(--muted) !important; font-weight: 500 !important; font-size: 12px !important; }
+.sim-badge {
+  display: inline-block;
+  background: #e0e7f7;
+  color: #4a5a7a;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  margin-right: 6px;
+  font-family: 'IBM Plex Mono', monospace;
+  vertical-align: middle;
+}
+.sim-arrow {
+  display: inline-block;
+  color: #9aa6c0;
+  margin-right: 4px;
+  font-size: 11px;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-family: 'IBM Plex Mono', monospace;
+  letter-spacing: 0.3px;
+}
+.badge-ok { background: var(--green-soft); color: var(--green); }
+.badge-warn { background: var(--amber-soft); color: var(--amber); }
+.badge-danger { background: var(--red-soft); color: var(--red); }
+.badge-neutral { background: var(--slate); color: var(--muted); }
+
+.doviz-tag {
+  display: inline-block;
+  background: var(--blue-soft);
+  color: var(--blue);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: 'IBM Plex Mono', monospace;
+  margin-right: 3px;
+}
+
+/* DETAIL PANEL */
+#detailPanel {
+  display: none;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 20px rgba(11,30,61,0.08);
+}
+
+.detail-header {
+  background: var(--navy2);
+  color: #fff;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.detail-header-left h3 { font-size: 15px; font-weight: 600; }
+.detail-header-left p { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 2px; }
+.btn-close-detail {
+  background: rgba(255,255,255,0.1);
+  border: none;
+  color: #fff;
+  width: 28px; height: 28px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  display: grid; place-items: center;
+  transition: background 0.15s;
+}
+.btn-close-detail:hover { background: rgba(255,255,255,0.18); }
+
+.detail-doviz-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  background: var(--slate);
+  gap: 0;
+}
+.detail-doviz-tab {
+  padding: 10px 18px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: 0.15s;
+  font-family: 'IBM Plex Mono', monospace;
+  color: var(--muted);
+  background: transparent;
+  border-top: none; border-left: none; border-right: none;
+}
+.detail-doviz-tab.active { color: var(--blue); border-bottom-color: var(--blue); background: #fff; }
+.detail-doviz-tab:hover:not(.active) { color: var(--text); }
+
+#detailContent { padding: 20px; }
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.metric-card {
+  background: var(--slate);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+.metric-card-label { font-size: 10px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; font-family: 'IBM Plex Mono', monospace; }
+.metric-card-val { font-size: 17px; font-weight: 600; font-family: 'IBM Plex Mono', monospace; }
+.val-red { color: var(--red); }
+.val-green { color: var(--green); }
+.val-navy { color: var(--navy); }
+.val-muted { color: var(--muted); }
+
+.info-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.info-card {
+  background: #fafbfc;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 10px 12px;
+}
+.info-card-label { font-size: 10px; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
+.info-card-val { font-size: 12px; font-weight: 500; color: var(--text); font-family: 'IBM Plex Mono', monospace; }
+
+.fatura-title {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding: 8px 0;
+  margin-bottom: 8px;
+  border-top: 1px solid var(--border);
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.fatura-table { width: 100%; border-collapse: collapse; }
+.fatura-table thead th {
+  text-align: left;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--border);
+  font-family: 'IBM Plex Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.fatura-table tbody td {
+  padding: 9px 10px;
+  font-size: 12px;
+  border-bottom: 1px solid #f1f3f7;
+  font-family: 'IBM Plex Mono', monospace;
+}
+.fatura-table tbody tr:last-child td { border-bottom: none; }
+.fatura-table tbody tr:hover td { background: #f7f9fc; }
+.total-fatura td { font-weight: 600; color: var(--navy); background: var(--slate) !important; }
+
+/* EMPTY */
+.empty-state {
+  text-align: center;
+  padding: 48px 20px;
+  color: var(--muted);
+}
+.empty-state svg { opacity: 0.25; margin-bottom: 12px; }
+.empty-state p { font-size: 13px; }
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+  .info-row { grid-template-columns: repeat(2, 1fr); }
+  .stats-bar { gap: 8px; }
+  .stat-pill { min-width: 0; flex: 1; }
+}
+@media (max-width: 480px) {
+  .metrics-grid { grid-template-columns: 1fr 1fr; }
+  #resultsScreen { padding: 14px; }
+}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+
+<nav>
+  <div class="brand">
+    <div class="brand-icon">OV</div>
+    Ortalama Vade — Toplu Analiz
+  </div>
+  <div class="nav-tag">TOPLU v1.0</div>
+</nav>
+
+<!-- UPLOAD -->
+<div id="uploadScreen">
+  <div class="upload-card">
+    <h1>Toplu Ekstre Analizi</h1>
+    <p>Her şirkete ait ekstre dosyasını seçin. Tüm şirketler tek seferde analiz edilir, sonuç Excel olarak indirilir.</p>
+
+    <!-- Webhook URL (gizli, varsayılan kullanılır) -->
+    <div style="display:none">
+      <input type="text" id="webhookUrl" class="url-input">
+      <a href="#" id="urlResetLink" onclick="resetWebhookUrl(event)"></a>
+    </div>
+
+    <div class="field-label">Ekstre Dosyaları <span style="font-weight:400;text-transform:none;letter-spacing:0">(birden fazla seçilebilir)</span></div>
+    <div class="drop-zone" id="dropZone">
+      <input type="file" id="fileInput" accept=".xls,.xlsx" multiple onchange="onFileSelect(this)">
+      <div class="drop-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1857d1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+      </div>
+      <div class="drop-title" id="dropTitle">Dosyaları sürükleyin veya seçin</div>
+      <div class="drop-sub" id="dropSub">.xlsx · birden fazla dosya seçilebilir</div>
+      <div class="drop-file" id="dropFile"></div>
+    </div>
+    <div id="fileList"></div>
+
+    <!-- SIMULATION PANEL -->
+    <div class="sim-panel">
+      <div class="sim-panel-header">
+        <div class="sim-panel-title">
+          <div class="sim-panel-title-icon">+</div>
+          Simüle Tahsilat
+        </div>
+        <span class="sim-panel-hint">Boş bırakılırsa simülasyon yapılmaz</span>
+      </div>
+      <div class="sim-row">
+        <input type="text" id="simAmount" class="sim-amount" placeholder="Sanal tahsilat tutarı (örn. 50000)" inputmode="decimal">
+        <input type="number" id="simGun" class="sim-gun" placeholder="Vade (gün)" min="0" max="999" inputmode="numeric">
+        <select id="simDoviz" class="sim-doviz">
+          <option value="TL">TL</option>
+          <option value="USD">USD</option>
+          <option value="EUR">EUR</option>
+          <option value="GBP">GBP</option>
+          <option value="CHF">CHF</option>
+        </select>
+      </div>
+    </div>
+
+    <button class="btn-submit" id="submitBtn" onclick="submitForm()" disabled>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      Tüm Şirketleri Analiz Et
+    </button>
+
+    <div class="status" id="status">
+      <div class="spinner" id="spinner"></div>
+      <span id="statusText"></span>
+    </div>
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div id="resultsScreen">
+  <div class="results-header">
+    <div class="results-title">
+      <h2 id="resultsTitle">Toplu Analiz Sonuçları</h2>
+      <p id="resultsSubtitle">—</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn-excel" onclick="exportExcel()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="8" y1="13" x2="16" y2="13"/>
+          <line x1="8" y1="17" x2="16" y2="17"/>
+        </svg>
+        Excel İndir
+      </button>
+      <button class="btn-back" onclick="goBack()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+        Yeni Analiz
+      </button>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-bar" id="statsBar"></div>
+
+  <!-- SEARCH -->
+  <div class="search-row">
+    <input class="search-input" id="searchInput" placeholder="Şirket adı ara..." oninput="filterTable()">
+    <select class="filter-select" id="filterVade" onchange="filterTable()">
+      <option value="">Tüm Vadeler</option>
+      <option value="asim">Vade Aşımı</option>
+      <option value="normal">Normal</option>
+    </select>
+    <select class="filter-select" id="filterDoviz" onchange="filterTable()">
+      <option value="">Tüm Dövizler</option>
+      <option value="TL">TL</option>
+      <option value="USD">USD</option>
+      <option value="EUR">EUR</option>
+    </select>
+  </div>
+
+  <!-- DETAIL -->
+  <div id="detailPanel">
+    <div class="detail-header">
+      <div class="detail-header-left">
+        <h3 id="detailFirma">—</h3>
+        <p id="detailSub">—</p>
+      </div>
+      <button class="btn-close-detail" onclick="closeDetail()">×</button>
+    </div>
+    <div class="detail-doviz-tabs" id="detailTabs"></div>
+    <div id="detailContent"></div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="company-table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Şirket</th>
+          <th>Döviz</th>
+          <th>Tahsilat Tarihi</th>
+          <th style="text-align:right">Tahsilat Tutarı</th>
+          <th style="text-align:right">Bakiye</th>
+          <th>Sevk Ort. Vade</th>
+          <th>Anlaşılan Vade</th>
+          <th>Olması Gereken</th>
+          <th>Tahsilat Vade</th>
+          <th>Vade Aşımı</th>
+          <th style="text-align:right">Vade Farkı</th>
+          <th>Durum</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const DEFAULT_WEBHOOK_URL = 'https://farrier.app.n8n.cloud/webhook/ortalama-vade-toplu';
+const WEBHOOK_LS_KEY = 'ortvade_webhook_url';
+let WEBHOOK_URL = DEFAULT_WEBHOOK_URL;
+
+// === Vade Farkı Hesabı ===
+// Formül: VadeFarkı = VadeAşımı × (TahsilatTutarı × Oran / 30) / 100
+//   - Oran (yüzde olarak ham sayı): TL=5, USD/EUR/GBP/CHF=1
+//   - Negatif vade aşımı (erken ödeme) → negatif sonuç (iskonto)
+const FAIZ_ORANI_TL    = 5;
+const FAIZ_ORANI_DOVIZ = 1;
+
+function hesaplaVadeFarki(tahsilatTutari, vadeAsimi, doviz) {
+  if (tahsilatTutari === null || tahsilatTutari === undefined || isNaN(tahsilatTutari)) return null;
+  if (vadeAsimi === null || vadeAsimi === undefined || isNaN(vadeAsimi)) return null;
+  const oran = (doviz === 'TL') ? FAIZ_ORANI_TL : FAIZ_ORANI_DOVIZ;
+  const vadeFarki   = vadeAsimi * (tahsilatTutari * oran / 30) / 100;
+  const genelToplam = vadeFarki;
+  return { oran, taban: tahsilatTutari, vadeFarki, genelToplam };
+}
+
+function fmtPara(n, doviz) {
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  return n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ' + doviz;
+}
+
+let selectedFiles = [];
+let globalData = null;
+let activeDetailFirma = null;
+let activeDetailDoviz = null;
+
+window.addEventListener('DOMContentLoaded', () => {
+  loadWebhookUrl();
+  checkReady();
+  setupDrop();
+});
+
+function loadWebhookUrl() {
+  let saved = null;
+  try { saved = localStorage.getItem(WEBHOOK_LS_KEY); } catch(e) {}
+  WEBHOOK_URL = saved || DEFAULT_WEBHOOK_URL;
+  const input = document.getElementById('webhookUrl');
+  if (input) input.value = WEBHOOK_URL;
+}
+
+function saveWebhookUrl() {
+  const input = document.getElementById('webhookUrl');
+  const val = (input.value || '').trim();
+  if (!val) { showToast('URL boş olamaz'); return; }
+  if (!/^https?:\/\//i.test(val)) { showToast('URL http(s):// ile başlamalı'); return; }
+  WEBHOOK_URL = val;
+  try { localStorage.setItem(WEBHOOK_LS_KEY, val); } catch(e) {}
+  showToast('✅ Webhook URL kaydedildi');
+}
+
+function resetWebhookUrl(e) {
+  if (e) e.preventDefault();
+  WEBHOOK_URL = DEFAULT_WEBHOOK_URL;
+  try { localStorage.removeItem(WEBHOOK_LS_KEY); } catch(e2) {}
+  const input = document.getElementById('webhookUrl');
+  if (input) input.value = DEFAULT_WEBHOOK_URL;
+  showToast('Varsayılan URL geri yüklendi');
+}
+
+function checkReady() {
+  document.getElementById('submitBtn').disabled = selectedFiles.length === 0;
+}
+
+function formatBytes(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+  return (b/1048576).toFixed(1) + ' MB';
+}
+
+function renderFileList() {
+  const dz = document.getElementById('dropZone');
+  const list = document.getElementById('fileList');
+  if (selectedFiles.length === 0) {
+    dz.classList.remove('has-file');
+    document.getElementById('dropTitle').style.display = '';
+    document.getElementById('dropSub').style.display = '';
+    document.getElementById('dropFile').textContent = '';
+    list.innerHTML = '';
+  } else {
+    dz.classList.add('has-file');
+    document.getElementById('dropTitle').style.display = 'none';
+    document.getElementById('dropSub').style.display = 'none';
+    document.getElementById('dropFile').textContent = selectedFiles.length + ' dosya seçildi';
+    list.innerHTML = selectedFiles.map((f, i) => `
+      <div class="file-item">
+        <span class="file-item-name">📄 ${escHtml(f.name)}</span>
+        <span class="file-item-size">${formatBytes(f.size)}</span>
+        <button class="file-item-remove" onclick="removeFile(${i})" title="Kaldır">×</button>
+      </div>`).join('');
+  }
+  checkReady();
+}
+
+function addFiles(fileList) {
+  const existing = new Set(selectedFiles.map(f => f.name));
+  for (const f of fileList) {
+    if (!existing.has(f.name)) { selectedFiles.push(f); existing.add(f.name); }
+  }
+  renderFileList();
+}
+
+function removeFile(idx) {
+  selectedFiles.splice(idx, 1);
+  renderFileList();
+}
+
+function onFileSelect(input) {
+  if (input.files.length) addFiles(input.files);
+  input.value = '';
+}
+
+function setupDrop() {
+  const dz = document.getElementById('dropZone');
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault();
+    dz.classList.remove('over');
+    const files = [...e.dataTransfer.files].filter(f => f.name.match(/\.xlsx?$/i));
+    if (files.length) addFiles(files);
+  });
+}
+
+async function submitForm() {
+  if (selectedFiles.length === 0) { setStatus('error', 'Lütfen en az bir dosya seçin.'); return; }
+
+  // Simülasyon parametreleri
+  const simAmountRaw = (document.getElementById('simAmount').value || '').trim().replace(',', '.');
+  const simAmount = simAmountRaw ? parseFloat(simAmountRaw) : null;
+  const simDoviz = document.getElementById('simDoviz').value;
+  const simGunRaw = (document.getElementById('simGun').value || '').trim();
+  const simGun = simGunRaw ? parseInt(simGunRaw, 10) : 0;
+  const simAktif = simAmount !== null && !isNaN(simAmount) && simAmount > 0;
+
+  const baslik = simAktif
+    ? `${selectedFiles.length} şirket + simülasyon (${simAmount.toLocaleString('tr-TR')} ${simDoviz}, ${simGun} gün) hesaplanıyor...`
+    : `${selectedFiles.length} şirket analiz ediliyor...`;
+  setStatus('loading', baslik);
+  document.getElementById('submitBtn').disabled = true;
+
+  // Dosyaları her zaman fresh Blob'lara çevirip FormData'ya ekle
+  // ("The object can not be cloned" hatasını önler — bazı tarayıcılar/eklentiler
+  // direkt File referanslarında structured-clone hatası veriyor)
+  let fd;
+  try {
+    fd = new FormData();
+    for (const f of selectedFiles) {
+      const buf = await f.arrayBuffer();
+      const blob = new Blob([buf], { type: f.type || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      fd.append('files', blob, f.name);
+    }
+    if (simAktif) {
+      fd.append('simulasyonTutar', String(simAmount));
+      fd.append('simulasyonDoviz', simDoviz);
+      fd.append('simulasyonGun', String(simGun));
+    }
+  } catch (e) {
+    console.error('FormData hazırlama hatası:', e);
+    setStatus('error', 'Dosya hazırlanamadı: ' + e.message);
+    document.getElementById('submitBtn').disabled = false;
+    return;
+  }
+
+  try {
+    console.log('POST →', WEBHOOK_URL);
+    const res = await fetch(WEBHOOK_URL, { method: 'POST', body: fd });
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      throw new Error('HTTP ' + res.status + (errText ? ' — ' + errText.substring(0, 200) : ''));
+    }
+    const data = await res.json();
+    hideStatus();
+    renderResults(data);
+  } catch (e) {
+    console.error('Fetch hatası:', e);
+    setStatus('error', 'Hata: ' + (e.name ? e.name + ' — ' : '') + e.message);
+    document.getElementById('submitBtn').disabled = false;
+  }
+}
+
+
+function setStatus(type, msg) {
+  const el = document.getElementById('status');
+  el.className = 'status ' + type;
+  document.getElementById('statusText').textContent = msg;
+  el.style.display = 'flex';
+}
+function hideStatus() {
+  document.getElementById('status').style.display = 'none';
+}
+
+function renderResults(data) {
+  globalData = data;
+  const satirlar = data.satirlar || [];
+
+  document.getElementById('uploadScreen').style.display = 'none';
+  document.getElementById('resultsScreen').style.display = 'block';
+
+  document.getElementById('resultsTitle').textContent = 'Toplu Analiz Sonuçları';
+  let altMetin = `${satirlar.length} şirket · ${new Date().toLocaleDateString('tr-TR')} ${new Date().toLocaleTimeString('tr-TR', {hour:'2-digit',minute:'2-digit'})}`;
+  if (data.simulasyonAktif && data.simulasyonInfo) {
+    const s = data.simulasyonInfo;
+    const tutar = (typeof s.tutar === 'number') ? s.tutar.toLocaleString('tr-TR') : s.tutar;
+    altMetin += ` · Simülasyon: ${tutar} ${s.doviz}`;
+  }
+  document.getElementById('resultsSubtitle').textContent = altMetin;
+
+  renderStats(satirlar);
+  renderTable(satirlar);
+}
+
+function renderStats(satirlar) {
+  let asimliSayisi = 0;
+  const toplamDoviz = new Set();
+  for (const r of satirlar) {
+    toplamDoviz.add(r.doviz);
+    if (r.vadeAsimi !== null && r.vadeAsimi > 0) asimliSayisi++;
+  }
+  document.getElementById('statsBar').innerHTML = `
+    <div class="stat-pill">
+      <div class="stat-pill-icon" style="background:#e8f0fe">🏢</div>
+      <div class="stat-pill-body">
+        <div class="stat-pill-val">${satirlar.length}</div>
+        <div class="stat-pill-label">Şirket</div>
+      </div>
+    </div>
+    <div class="stat-pill">
+      <div class="stat-pill-icon" style="background:#fee2e2">⚠️</div>
+      <div class="stat-pill-body">
+        <div class="stat-pill-val" style="color:var(--red)">${asimliSayisi}</div>
+        <div class="stat-pill-label">Vade Aşımı</div>
+      </div>
+    </div>
+    <div class="stat-pill">
+      <div class="stat-pill-icon" style="background:#d0f5e3">✅</div>
+      <div class="stat-pill-body">
+        <div class="stat-pill-val" style="color:var(--green)">${satirlar.length - asimliSayisi}</div>
+        <div class="stat-pill-label">Normal</div>
+      </div>
+    </div>
+    <div class="stat-pill">
+      <div class="stat-pill-icon" style="background:#fef3c7">💱</div>
+      <div class="stat-pill-body">
+        <div class="stat-pill-val">${[...toplamDoviz].join(' · ')}</div>
+        <div class="stat-pill-label">Dövizler</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderTable(satirlar) {
+  const q = (document.getElementById('searchInput').value || '').toLowerCase();
+  const fVade = document.getElementById('filterVade').value;
+  const fDoviz = document.getElementById('filterDoviz').value;
+
+  const rows = satirlar.filter(r => {
+    if (fDoviz && r.doviz !== fDoviz) return false;
+    if (fVade === 'asim' && !(r.vadeAsimi !== null && r.vadeAsimi > 0)) return false;
+    if (fVade === 'normal' && (r.vadeAsimi !== null && r.vadeAsimi > 0)) return false;
+    if (q && !r.firma.toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  const tbody = document.getElementById('tableBody');
+  if (rows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="12"><div class="empty-state">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <p>Sonuç bulunamadı</p></div></td></tr>`;
+    return;
+  }
+
+  function rowHtml(r, isSim) {
+    const va = r.vadeAsimi;
+    let badge, badgeText;
+    if (va === null || va === undefined) { badge = 'badge-neutral'; badgeText = 'Hesaplanamadı'; }
+    else if (va > 30) { badge = 'badge-danger'; badgeText = '+' + Math.round(va) + ' gün'; }
+    else if (va > 0)  { badge = 'badge-warn';   badgeText = '+' + Math.round(va) + ' gün'; }
+    else              { badge = 'badge-ok';      badgeText = Math.round(va) + ' gün'; }
+
+    const bakiye = r.bakiyeFormatted || (r.bakiye !== null ? r.bakiye.toLocaleString('tr-TR', {minimumFractionDigits:2}) + ' ' + r.doviz : '—');
+    const tahsilatTutariStr = (r.tahsilatTutari !== null && r.tahsilatTutari !== undefined && r.tahsilatTutari !== '')
+      ? r.tahsilatTutari.toLocaleString('tr-TR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' ' + r.doviz
+      : '—';
+
+    const vf = hesaplaVadeFarki(r.tahsilatTutari, r.vadeAsimi, r.doviz);
+    const vfStr = vf ? fmtPara(vf.genelToplam, r.doviz) : '—';
+
+    const trClass = isSim ? 'sim-row-table' : '';
+    const firmaCell = isSim
+      ? `<span class="sim-arrow">↳</span><span class="sim-badge">SİM</span>Simüle Tahsilat`
+      : escHtml(r.firma);
+
+    return `<tr class="${trClass}">
+      <td>${firmaCell}</td>
+      <td><span class="doviz-tag">${r.doviz}</span></td>
+      <td class="mono-cell">${escHtml(r.tahsilatTarihi || '—')}</td>
+      <td class="num-cell">${escHtml(tahsilatTutariStr)}</td>
+      <td class="num-cell">${escHtml(bakiye)}</td>
+      <td class="mono-cell">${escHtml(r.sevkOrtVade || '—')}</td>
+      <td class="mono-cell">${r.vade !== null ? r.vade + ' gün' : '—'}</td>
+      <td class="mono-cell">${escHtml(r.olmasiGereken || '—')}</td>
+      <td class="mono-cell">${escHtml(r.tahsilatOrtVade || '—')}</td>
+      <td class="mono-cell">${va !== null && va !== undefined ? (va > 0 ? '+' : '') + Math.round(va) + ' gün' : '—'}</td>
+      <td class="num-cell" style="${vf ? (vf.genelToplam > 0 ? 'color:var(--red);font-weight:600' : 'color:var(--green);font-weight:600') : ''}">${vfStr}</td>
+      <td><span class="badge ${badge}">${badgeText}</span></td>
+    </tr>`;
+  }
+
+  tbody.innerHTML = rows.map(r => {
+    let html = rowHtml(r, false);
+    if (r.simulasyon) {
+      html += rowHtml(r.simulasyon, true);
+    }
+    return html;
+  }).join('');
+}
+
+function filterTable() {
+  if (!globalData) return;
+  renderTable(globalData.satirlar || []);
+}
+
+
+function openDetail(sh, defaultDoviz) {
+  const toplu = globalData.topluSonuclar || {};
+  const item = toplu[sh];
+  if (!item) return;
+
+  activeDetailFirma = sh;
+  activeDetailDoviz = defaultDoviz;
+
+  const firma = item.firma || sh;
+  document.getElementById('detailFirma').textContent = firma;
+  document.getElementById('detailSub').textContent = sh !== firma ? `Sheet: ${sh}` : '';
+
+  const dovizler = Object.keys(item.dovizSonuclari || {});
+  document.getElementById('detailTabs').innerHTML = dovizler.map(d =>
+    `<button class="detail-doviz-tab${d === defaultDoviz ? ' active' : ''}" onclick="switchDetailDoviz('${sh}','${d}')">${d}</button>`
+  ).join('');
+
+  renderDetailContent(item, defaultDoviz);
+
+  const panel = document.getElementById('detailPanel');
+  panel.style.display = 'block';
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function switchDetailDoviz(sh, doviz) {
+  activeDetailDoviz = doviz;
+  document.querySelectorAll('.detail-doviz-tab').forEach(t => {
+    t.classList.toggle('active', t.textContent === doviz);
+  });
+  const item = (globalData.topluSonuclar || {})[sh];
+  if (item) renderDetailContent(item, doviz);
+}
+
+function renderDetailContent(item, doviz) {
+  const d = (item.dovizSonuclari || {})[doviz];
+  if (!d) { document.getElementById('detailContent').innerHTML = '<p style="padding:20px;color:var(--muted)">Veri bulunamadı.</p>'; return; }
+
+  const va = d['VADE AŞIMI'];
+  let vaClass = 'val-muted';
+  if (va !== null && va !== undefined) vaClass = va > 0 ? 'val-red' : 'val-green';
+
+  const faturalar = d['odenmemis_faturalar'] || [];
+  const faturaRows = faturalar.map(f =>
+    `<tr>
+      <td>${escHtml(f.tarih || '—')}</td>
+      <td>${escHtml(f.belge_no || '—')}</td>
+      <td>${escHtml(f.tutar || '—')}</td>
+      <td>${f.kismi ? '<span class="badge badge-warn">Kısmi</span>' : '<span class="badge badge-ok">Tam</span>'}</td>
+    </tr>`
+  ).join('');
+
+  const toplamTutar = d['toplam_tutar'] || d['BAKİYE_FORMATTED'] || '—';
+
+  document.getElementById('detailContent').innerHTML = `
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-card-label">Bakiye</div>
+        <div class="metric-card-val val-navy" style="font-size:14px">${escHtml(d['BAKİYE_FORMATTED'] || '—')}</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-card-label">Anlaşılan Vade</div>
+        <div class="metric-card-val val-navy">${d['VADE'] !== null ? d['VADE'] + ' gün' : '—'}</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-card-label">Vade Aşımı</div>
+        <div class="metric-card-val ${vaClass}">${va !== null && va !== undefined ? (va > 0 ? '+' : '') + Math.round(va) + ' gün' : '—'}</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-card-label">Toplam Vade</div>
+        <div class="metric-card-val val-navy">${d['Toplam Vade'] !== null ? Math.round(d['Toplam Vade']) + ' gün' : '—'}</div>
+      </div>
+    </div>
+    <div class="info-row">
+      <div class="info-card">
+        <div class="info-card-label">Sevk Ort. Vade</div>
+        <div class="info-card-val">${escHtml(d['SEVK ORTALAMA VADE'] || '—')}</div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-label">Olması Gereken</div>
+        <div class="info-card-val">${escHtml(d['OLMASI GEREKEN'] || '—')}</div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-label">Tahsilat Ort. Vade</div>
+        <div class="info-card-val">${escHtml(d['TAHSİLAT ORT. VADE'] || '—')}</div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-label">Tahsilat Tarihi</div>
+        <div class="info-card-val">${escHtml(d['TARİH'] || '—')}</div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-label">Tahsilat Tutarı</div>
+        <div class="info-card-val">${escHtml(d['TAHSİLAT TUTARI_FORMATTED'] || '—')}</div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-label">Tahsilat Türü</div>
+        <div class="info-card-val">${escHtml(d['TAHSİLAT TÜRÜ'] || '—')}</div>
+      </div>
+    </div>
+
+    ${(() => {
+      const vf = hesaplaVadeFarki(d['TAHSİLAT TUTARI'], d['VADE AŞIMI'], doviz);
+      if (!vf) return '';
+      const isk = vf.genelToplam < 0;
+      const renkSinif = isk ? 'val-green' : 'val-red';
+      const baslik = isk ? 'Vade Farkı İskontosu' : 'Vade Farkı Hesabı';
+      const oranYuzde = vf.oran.toLocaleString('tr-TR', {maximumFractionDigits:2}) + '%';
+      return `
+      <div class="fatura-title">${baslik}</div>
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-card-label">Faiz Oranı</div>
+          <div class="metric-card-val val-navy">${oranYuzde}</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-card-label">Tahsilat Tutarı</div>
+          <div class="metric-card-val val-navy" style="font-size:14px">${escHtml(fmtPara(vf.taban, doviz))}</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-card-label">Vade Aşımı</div>
+          <div class="metric-card-val ${renkSinif}">${Math.round(d['VADE AŞIMI'] || 0)} gün</div>
+        </div>
+        <div class="metric-card" style="background:${isk ? '#f0fdf6' : '#fef2f2'};border-color:${isk ? 'var(--green)' : 'var(--red)'}">
+          <div class="metric-card-label">Genel Toplam</div>
+          <div class="metric-card-val ${renkSinif}" style="font-size:15px">${escHtml(fmtPara(vf.genelToplam, doviz))}</div>
+        </div>
+      </div>
+      <div style="background:#fafbfc;border:1px solid var(--border);border-radius:7px;padding:10px 12px;margin-bottom:16px;font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;line-height:1.7">
+        <strong style="color:var(--navy);font-family:'IBM Plex Sans',sans-serif">Formül:</strong> Vade Aşımı × (Tahsilat Tutarı × Oran ÷ 30) ÷ 100 &nbsp;=&nbsp; ${Math.round(d['VADE AŞIMI'] || 0)} × (${escHtml(fmtPara(d['TAHSİLAT TUTARI'], doviz))} × ${oranYuzde.replace('%','')} ÷ 30) ÷ 100
+      </div>`;
+    })()}
+
+    ${faturalar.length > 0 ? `
+    <div class="fatura-title">Ödenmemiş Faturalar (${faturalar.length} adet)</div>
+    <table class="fatura-table">
+      <thead><tr><th>Tarih</th><th>Belge No</th><th>Tutar</th><th>Durum</th></tr></thead>
+      <tbody>
+        ${faturaRows}
+        <tr class="total-fatura">
+          <td colspan="2">TOPLAM</td>
+          <td>${escHtml(toplamTutar)}</td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>` : '<p style="color:var(--muted);font-size:12px;margin-top:4px">Ödenmemiş fatura yok.</p>'}
+  `;
+}
+
+function closeDetail() {
+  document.getElementById('detailPanel').style.display = 'none';
+  activeDetailFirma = null;
+}
+
+function goBack() {
+  document.getElementById('resultsScreen').style.display = 'none';
+  document.getElementById('uploadScreen').style.display = 'flex';
+  selectedFiles = [];
+  renderFileList();
+  hideStatus();
+  globalData = null;
+  // Simülasyon inputlarını da sıfırla
+  const sa = document.getElementById('simAmount');
+  if (sa) sa.value = '';
+  const sg = document.getElementById('simGun');
+  if (sg) sg.value = '';
+  const sd = document.getElementById('simDoviz');
+  if (sd) sd.value = 'TL';
+}
+
+function exportExcel() {
+  if (!globalData) return;
+  const satirlar = globalData.satirlar || [];
+  if (satirlar.length === 0) { showToast('Dışa aktarılacak veri yok'); return; }
+
+  // XLSX writeFile structured-clone kullanıyor; tüm hücreleri primitive yap.
+  const cell = (v) => {
+    if (v === null || v === undefined) return '';
+    if (typeof v === 'number') return Number.isFinite(v) ? v : '';
+    if (typeof v === 'string' || typeof v === 'boolean') return v;
+    if (v instanceof Date) return v.toLocaleDateString('tr-TR');
+    return String(v);
+  };
+  const num = (v, dec = 2) => {
+    if (v === null || v === undefined || v === '') return '';
+    const n = typeof v === 'number' ? v : parseFloat(v);
+    return Number.isFinite(n) ? parseFloat(n.toFixed(dec)) : '';
+  };
+
+  const headers = [
+    'Yıl', 'Hafta', 'TARİH', 'FİRMA', 'MÜŞTERİ TEMSİLCİSİ', 'BÜTÇE GRUBU', 'FASON/SATIŞ',
+    'BAKİYE', 'Döviz Cinsi', 'TAHSİLAT TÜRÜ', 'TAHSİLAT TUTARI', 'Döviz Cinsi2',
+    'TAHSİLAT TL KARŞILIĞI', 'SEVK ORTALAMA VADE', 'VADE', 'OLMASI GEREKEN',
+    'TAHSİLAT ORT. VADE', 'VADE AŞIMI', 'Toplam Vade',
+    'Vade Farkı Oranı', 'Vade Farkı Tutarı', 'Vade Farkı TL'
+  ];
+
+  function satiriYaz(r, isSim) {
+    const tahsilatTL_raw = (r.tahsilatTutariTL !== null && r.tahsilatTutariTL !== undefined && r.tahsilatTutariTL !== '')
+      ? r.tahsilatTutariTL
+      : (r.doviz === 'TL' ? (r.tahsilatTutari ?? '') : '');
+    const firmaCell = isSim ? `   ↳ SİMÜLE — ${r.firma}` : r.firma;
+    const vf = hesaplaVadeFarki(r.tahsilatTutari, r.vadeAsimi, r.doviz);
+    const vfOran  = vf ? vf.oran : '';
+    const vfTutar = vf ? num(vf.vadeFarki, 2) : '';
+    // Vade Farkı TL = Vade Farkı (döviz cinsi) × kur
+    // Kur = TL Karşılığı / Tahsilat Tutarı (TL ekstrelerinde 1)
+    let vfTL = '';
+    if (vf) {
+      if (r.doviz === 'TL') {
+        vfTL = num(vf.vadeFarki, 2);
+      } else {
+        const tutar = parseFloat(r.tahsilatTutari);
+        const tlk = parseFloat(tahsilatTL_raw);
+        if (Number.isFinite(tutar) && tutar !== 0 && Number.isFinite(tlk)) {
+          const kur = tlk / tutar;
+          vfTL = num(vf.vadeFarki * kur, 2);
+        }
+      }
+    }
+    return [
+      '',                          // Yıl
+      '',                          // Hafta
+      cell(r.tahsilatTarihi),      // TARİH
+      cell(firmaCell),             // FİRMA
+      '',                          // MÜŞTERİ TEMSİLCİSİ
+      '',                          // BÜTÇE GRUBU
+      '',                          // FASON/SATIŞ
+      num(r.bakiye, 2),            // BAKİYE
+      cell(r.doviz),               // Döviz Cinsi
+      cell(r.tahsilatTuru),        // TAHSİLAT TÜRÜ
+      num(r.tahsilatTutari, 2),    // TAHSİLAT TUTARI
+      cell(r.doviz),               // Döviz Cinsi2
+      num(tahsilatTL_raw, 2),      // TAHSİLAT TL KARŞILIĞI
+      cell(r.sevkOrtVade),         // SEVK ORTALAMA VADE
+      num(r.vade, 0),              // VADE
+      cell(r.olmasiGereken),       // OLMASI GEREKEN
+      cell(r.tahsilatOrtVade),     // TAHSİLAT ORT. VADE
+      num(r.vadeAsimi, 1),         // VADE AŞIMI
+      num(r.toplamVade, 1),        // Toplam Vade
+      vfOran,                      // Vade Farkı Oranı
+      vfTutar,                     // Vade Farkı Tutarı (döviz cinsi)
+      vfTL                         // Vade Farkı TL
+    ];
+  }
+
+  const wsData = [headers];
+  const simRowIndices = [];
+  for (const r of satirlar) {
+    wsData.push(satiriYaz(r, false));
+    if (r.simulasyon) {
+      wsData.push(satiriYaz(r.simulasyon, true));
+      simRowIndices.push(wsData.length - 1);
+    }
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+  ws['!cols'] = [
+    {wch:6},  {wch:7},  {wch:14}, {wch:42}, {wch:18}, {wch:14}, {wch:13},
+    {wch:14}, {wch:10}, {wch:18}, {wch:16}, {wch:11}, {wch:18},
+    {wch:18}, {wch:8},  {wch:18}, {wch:18}, {wch:12}, {wch:12},
+    {wch:14}, {wch:16}, {wch:16}
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'TOPLU VADE ANALİZİ');
+
+  const tarih = new Date().toISOString().slice(0,10).replace(/-/g,'_');
+  const dosyaAdi = globalData.simulasyonAktif
+    ? `Toplu_Vade_Analizi_Simulasyonlu_${tarih}.xlsx`
+    : `Toplu_Vade_Analizi_${tarih}.xlsx`;
+  try {
+    XLSX.writeFile(wb, dosyaAdi);
+    showToast('✅ Excel indiriliyor...');
+  } catch (err) {
+    console.error('Excel export hatası:', err, 'wsData örneği:', wsData[1]);
+    showToast('❌ Excel hatası: ' + (err.message || err));
+  }
+}
+
+
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:20px;right:20px;background:var(--navy);color:#fff;padding:10px 16px;border-radius:8px;font-size:12px;z-index:9999;animation:fadeIn 0.2s;';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2000);
+}
+</script>
+</body>
+</html>
